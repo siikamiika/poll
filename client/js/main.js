@@ -15,8 +15,9 @@ function fetchUserName() {
 }
 
 function updateUserName() {
+    const context = getContext();
     const userName = document.querySelector('#user_name').value;
-    xhr(`users?name=${userName}`, 'POST');
+    xhr(`users?name=${userName}`, 'POST', () => fetchPollResults(context.poll));
 }
 
 function getContext() {
