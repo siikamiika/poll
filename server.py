@@ -4,8 +4,9 @@ import os
 import uuid
 import json
 import sqlite3
+import traceback
 
-from tornado import web, ioloop
+from tornado import web, ioloop, websocket
 
 class DB:
     def __init__(self, db_path):
@@ -153,6 +154,9 @@ class ChoiceHandler(web.RequestHandler):
         db.commit()
 
 class VoteHandler(web.RequestHandler):
+    def initialize(self, clients):
+        self._clients = clients
+
     def get(self):
         user_id = auth(self)
         poll_id = self.get_argument('poll_id', '')
@@ -171,6 +175,9 @@ class VoteHandler(web.RequestHandler):
     def post(self):
         user_id = auth(self)
         choice_id = self.get_argument('choice_id', '')
+        if not (rows := db.select('select * from choices where id = ?', [choice_id])):
+            raise web.HTTPError(404)
+        poll_id = rows[0]['poll_id']
         if db.select('select * from votes where user_id = ? and choice_id = ?', [user_id, choice_id]):
             db.delete('delete from votes where user_id = ? and choice_id = ?', [user_id, choice_id])
             db.commit()
@@ -180,6 +187,17 @@ class VoteHandler(web.RequestHandler):
                 [choice_id, user_id]
             )
             db.commit()
+        i = 0
+        clients = self._clients.get(str(poll_id)) or []
+        while i < len(clients):
+            client = clients[i]
+            try:
+                client.write_message({'type': 'vote'})
+            except:
+                clients.remove(client)
+                i -= 1
+                traceback.print_exc()
+            i += 1
 
 class VoterHandler(web.RequestHandler):
     def get(self):
@@ -194,14 +212,32 @@ class VoterHandler(web.RequestHandler):
         ''', [poll_id])
         self.write(serialize(voters))
 
+class EventSubscriptionHandler(websocket.WebSocketHandler):
+    def initialize(self, clients):
+        self._clients = clients
+
+    def check_origin(self, origin):
+        return True
+
+    def open(self):
+        poll_id = self.get_argument('poll_id', '')
+        if poll_id not in self._clients:
+            self._clients[poll_id] = []
+        self._clients[poll_id].append(self)
+
+    def on_close(self):
+        poll_id = self.get_argument('poll_id', '')
+        self._clients[poll_id].remove(self)
 
 def main():
+    clients = {}
     app = web.Application([
         (r'/users', UserHandler),
         (r'/polls', PollHandler),
-        (r'/votes', VoteHandler),
+        (r'/votes', VoteHandler, {'clients': clients}),
         (r'/voters', VoterHandler),
         (r'/choices', ChoiceHandler),
+        (r'/events', EventSubscriptionHandler, {'clients': clients}),
         (
             r'/(.*)',
             web.StaticFileHandler,

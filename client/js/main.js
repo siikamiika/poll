@@ -128,7 +128,7 @@ function fetchPollResults(poll) {
 }
 
 function vote(choiceId) {
-    xhr(`votes?choice_id=${choiceId}`, 'POST', reload);
+    xhr(`votes?choice_id=${choiceId}`, 'POST');
 }
 
 function fetchVoters(poll) {
@@ -144,11 +144,21 @@ function fetchVoters(poll) {
     });
 }
 
+let socket = null;
+
 function reload() {
     fetchUserName();
     fetchPolls();
     const context = getContext();
     fetchPollResults(context.poll);
+
+    if (socket) {
+        socket.close();
+    }
+    if (context.poll) {
+        socket = new WebSocket(`ws://${window.location.host}/events?poll_id=${context.poll}`);
+        socket.addEventListener('message', reload);
+    }
 }
 
 (() => {
