@@ -66,7 +66,8 @@ class DB:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 poll_id INTEGER NOT NULL,
                 name TEXT NOT NULL,
-                FOREIGN KEY(poll_id) REFERENCES polls(id)
+                FOREIGN KEY(poll_id) REFERENCES polls(id),
+                UNIQUE (poll_id, name)
             )
         ''')
         self._execute('CREATE INDEX IF NOT EXISTS choice_poll_id_idx ON choices (poll_id)')
@@ -162,7 +163,9 @@ class ChoiceHandler(web.RequestHandler):
         poll_id = self.get_argument('poll_id', '')
         if not db.select('select * from polls where id = ?', [poll_id]):
             raise web.HTTPError(404)
-        name = self.get_argument('name', '')
+        name = self.get_argument('name', '').strip()
+        if not name:
+            raise web.HTTPError(400)
         db.insert(
             'insert into choices (poll_id, name) values (?, ?)',
             [poll_id, name]
