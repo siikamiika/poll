@@ -143,6 +143,8 @@ class ChoiceHandler(web.RequestHandler):
         if not user_id:
             raise web.HTTPError(403)
         poll_id = self.get_argument('poll_id', '')
+        if not db.select('select * from polls where id = ?', [poll_id]):
+            raise web.HTTPError(404)
         name = self.get_argument('name', '')
         db.insert(
             'insert into choices (poll_id, name) values (?, ?)',
