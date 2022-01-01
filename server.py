@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
 
 import os
-import traceback
 import uuid
 import json
 import sqlite3
-import contextlib
 
 from tornado import web, ioloop
 
