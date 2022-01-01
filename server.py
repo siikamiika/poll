@@ -97,6 +97,19 @@ def auth(handler):
 def serialize(rows):
     return json.dumps([dict(r) for r in rows]).encode('utf-8')
 
+def notify_subscribers(handler, poll_id):
+    i = 0
+    clients = handler._clients.get(str(poll_id)) or []
+    while i < len(clients):
+        client = clients[i]
+        try:
+            client.write_message({'type': 'vote'})
+        except:
+            clients.remove(client)
+            i -= 1
+            traceback.print_exc()
+        i += 1
+
 class UserHandler(web.RequestHandler):
     def get(self):
         user_id = auth(self)
@@ -133,6 +146,9 @@ class PollHandler(web.RequestHandler):
         self.write(str(row_id))
 
 class ChoiceHandler(web.RequestHandler):
+    def initialize(self, clients):
+        self._clients = clients
+
     def get(self):
         poll_id = self.get_argument('poll_id', '')
         choices = db.select('select * from choices where poll_id = ?', [poll_id])
@@ -152,6 +168,7 @@ class ChoiceHandler(web.RequestHandler):
             [poll_id, name]
         )
         db.commit()
+        notify_subscribers(self, poll_id)
 
 class VoteHandler(web.RequestHandler):
     def initialize(self, clients):
@@ -187,17 +204,7 @@ class VoteHandler(web.RequestHandler):
                 [choice_id, user_id]
             )
             db.commit()
-        i = 0
-        clients = self._clients.get(str(poll_id)) or []
-        while i < len(clients):
-            client = clients[i]
-            try:
-                client.write_message({'type': 'vote'})
-            except:
-                clients.remove(client)
-                i -= 1
-                traceback.print_exc()
-            i += 1
+        notify_subscribers(self, poll_id)
 
 class VoterHandler(web.RequestHandler):
     def get(self):
@@ -236,7 +243,7 @@ def main():
         (r'/polls', PollHandler),
         (r'/votes', VoteHandler, {'clients': clients}),
         (r'/voters', VoterHandler),
-        (r'/choices', ChoiceHandler),
+        (r'/choices', ChoiceHandler, {'clients': clients}),
         (r'/events', EventSubscriptionHandler, {'clients': clients}),
         (
             r'/(.*)',
