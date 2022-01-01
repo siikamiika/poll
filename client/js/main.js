@@ -1,7 +1,7 @@
 function xhr(path, method, onload=null, data=null) {
     const req = new XMLHttpRequest();
     req.addEventListener('load', onload || (() => null));
-    req.open(method, `http://${window.location.host}/${path}`);
+    req.open(method, `//${window.location.host}/${path}`);
     req.send(data);
 }
 
