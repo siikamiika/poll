@@ -15,9 +15,8 @@ function fetchUserName() {
 }
 
 function updateUserName() {
-    const context = getContext();
     const userName = document.querySelector('#user_name').value;
-    xhr(`users?name=${userName}`, 'POST', () => fetchPollResults(context.poll));
+    xhr(`users?name=${userName}`, 'POST', reload);
 }
 
 function getContext() {
@@ -62,8 +61,7 @@ function createPoll() {
     xhr(`polls?name=${pollName}`, 'POST', (r) => {
         const poll = r.target.responseText;
         saveContext(poll);
-        fetchPolls();
-        fetchPollResults(poll);
+        reload();
     });
 }
 
@@ -71,18 +69,17 @@ function onPollChanged() {
     const poll = document.querySelector('#polls').value;
     if (poll) {
         saveContext(poll);
-        fetchPollResults(poll);
+        reload();
     } else {
         saveContext(null);
+        reload();
     }
 }
 
 function addNewChoice() {
     const context = getContext();
     const choiceName = document.querySelector('#new_choice').value;
-    xhr(`choices?poll_id=${context.poll}&name=${choiceName}`, 'POST', (d) => {
-        fetchPollResults(context.poll);
-    });
+    xhr(`choices?poll_id=${context.poll}&name=${choiceName}`, 'POST', reload);
 }
 
 function fetchPollResults(poll) {
@@ -131,8 +128,7 @@ function fetchPollResults(poll) {
 }
 
 function vote(choiceId) {
-    const context = getContext();
-    xhr(`votes?choice_id=${choiceId}`, 'POST', () => fetchPollResults(context.poll));
+    xhr(`votes?choice_id=${choiceId}`, 'POST', reload);
 }
 
 function fetchVoters(poll) {
@@ -148,17 +144,19 @@ function fetchVoters(poll) {
     });
 }
 
+function reload() {
+    fetchUserName();
+    fetchPolls();
+    const context = getContext();
+    fetchPollResults(context.poll);
+}
+
 (() => {
     document.querySelector('#update_user_name').addEventListener('click', updateUserName)
     document.querySelector('#polls').addEventListener('change', onPollChanged)
     document.querySelector('#save_new_poll').addEventListener('click', createPoll)
     document.querySelector('#add_new_choice').addEventListener('click', addNewChoice);
 
-    fetchUserName();
-    fetchPolls();
-
-    const context = getContext();
-    if (context.poll) {
-        fetchPollResults(context.poll);
-    }
+    reload();
+    window.addEventListener('hashchange', reload);
 })();
