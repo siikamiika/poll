@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>NIH-poll</title>
+        <link rel="stylesheet" href="/css/style.css">
+    </head>
+    <body>
+        <h2>Settings</h2>
+        <table>
+            <tr>
+                <td>User name</td>
+                <td>
+                    <input type="text" id="user_name">
+                    <button id="update_user_name">save</button>
+                </td>
+            </tr>
+            <tr>
+                <td>Choose poll</td>
+                <td>
+                    <select id="polls"></select>
+                </td>
+            </tr>
+            <tr>
+                <td>New poll</td>
+                <td>
+                    <input type="text" id="new_poll_name">
+                    <button id="save_new_poll">save</button>
+                </td>
+            </tr>
+        </table>
+
+        <h2>Votes</h2>
+        <table id="choices"></table>
+        <div>
+            <input type="text" id="new_choice">
+            <button id="add_new_choice">add new choice</button>
+        </div>
+
+        <h2>Voters</h2>
+        <ul id="voters"></ul>
+
+        <script src="/js/main.js"></script>
+    </body>
+</html>
