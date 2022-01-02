@@ -73,14 +73,9 @@ function createPoll() {
 }
 
 function onPollChanged() {
-    const poll = document.querySelector('#polls').value;
-    if (poll) {
-        saveContext(poll);
-        reload();
-    } else {
-        saveContext(null);
-        reload();
-    }
+    const poll = document.querySelector('#polls').value || null;
+    saveContext(poll);
+    reload();
 }
 
 function addNewChoice() {
