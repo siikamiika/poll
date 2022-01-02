@@ -1,12 +1,19 @@
-function xhr(path, method, onload=null, data=null) {
+function xhr(path, params, method, onload=null, data=null) {
     const req = new XMLHttpRequest();
-    req.addEventListener('load', onload || (() => null));
-    req.open(method, `//${window.location.host}/${path}`);
+    if (onload) {
+        req.addEventListener('load', onload);
+    }
+    let url = `//${window.location.host}/${path}`;
+    if (params) {
+        const urlParams = new URLSearchParams(params);
+        url = `${url}?${urlParams.toString()}`;
+    }
+    req.open(method, url);
     req.send(data);
 }
 
 function fetchUserName() {
-    xhr('users', 'GET', (r) => {
+    xhr('users', null, 'GET', (r) => {
         const users = JSON.parse(r.target.responseText);
         for (const user of users) {
             document.querySelector('#user_name').value = user.name;
@@ -16,7 +23,7 @@ function fetchUserName() {
 
 function updateUserName() {
     const userName = document.querySelector('#user_name').value;
-    xhr(`users?name=${userName}`, 'POST', reload);
+    xhr('users', {name: userName}, 'POST', reload);
 }
 
 function getContext() {
@@ -32,7 +39,7 @@ function saveContext(poll) {
 }
 
 function fetchPolls() {
-    xhr('polls', 'GET', (r) => {
+    xhr('polls', null, 'GET', (r) => {
         const context = getContext();
         const polls = JSON.parse(r.target.responseText);
 
@@ -58,7 +65,7 @@ function fetchPolls() {
 
 function createPoll() {
     const pollName = document.querySelector('#new_poll_name').value;
-    xhr(`polls?name=${pollName}`, 'POST', (r) => {
+    xhr('polls', {name: pollName}, 'POST', (r) => {
         const poll = r.target.responseText;
         saveContext(poll);
         reload();
@@ -79,13 +86,13 @@ function onPollChanged() {
 function addNewChoice() {
     const context = getContext();
     const choiceName = document.querySelector('#new_choice').value;
-    xhr(`choices?poll_id=${context.poll}&name=${choiceName}`, 'POST', reload);
+    xhr('choices', {poll_id: context.poll, name: choiceName}, 'POST', reload);
 }
 
 function fetchPollResults(poll) {
-    xhr(`choices?poll_id=${poll}`, 'GET', (r) => {
+    xhr('choices', {poll_id: poll}, 'GET', (r) => {
         const choices = JSON.parse(r.target.responseText);
-        xhr(`votes?poll_id=${poll}`, 'GET', (r) => {
+        xhr('votes', {poll_id: poll}, 'GET', (r) => {
             const votes = JSON.parse(r.target.responseText);
             const votesByChoice = {};
             for (const vote of votes) {
@@ -124,16 +131,15 @@ function fetchPollResults(poll) {
             }
         });
     });
-    fetchVoters(poll);
 }
 
 function vote(choiceId) {
-    xhr(`votes?choice_id=${choiceId}`, 'POST');
+    xhr('votes', {choice_id: choiceId}, 'POST');
 }
 
 function fetchVoters(poll) {
     const el = document.querySelector('#voters');
-    xhr(`voters?poll_id=${poll}`, 'GET', (r) => {
+    xhr('voters', {poll_id: poll}, 'GET', (r) => {
         el.textContent = '';
         const voters = JSON.parse(r.target.responseText);
         for (const voter of voters) {
@@ -151,6 +157,7 @@ function reload() {
     fetchPolls();
     const context = getContext();
     fetchPollResults(context.poll);
+    fetchVoters(context.poll);
 
     if (socket) {
         socket.close();
