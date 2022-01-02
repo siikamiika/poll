@@ -47,7 +47,7 @@ class DB:
         self._execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
+                name TEXT NOT NULL UNIQUE,
                 token TEXT NOT NULL
             )
         ''')
@@ -125,11 +125,14 @@ class UserHandler(web.RequestHandler):
             db.commit()
         else:
             token = str(uuid.uuid4())
-            db.insert(
-                'insert into users (name, token) values (?, ?)',
-                [name, token]
-            )
-            db.commit()
+            try:
+                db.insert(
+                    'insert into users (name, token) values (?, ?)',
+                    [name, token]
+                )
+                db.commit()
+            except sqlite3.IntegrityError:
+                raise web.HTTPError(409)
             self.set_cookie('token', token)
 
 class PollHandler(web.RequestHandler):
@@ -166,11 +169,14 @@ class ChoiceHandler(web.RequestHandler):
         name = self.get_argument('name', '').strip()
         if not name:
             raise web.HTTPError(400)
-        db.insert(
-            'insert into choices (poll_id, name) values (?, ?)',
-            [poll_id, name]
-        )
-        db.commit()
+        try:
+            db.insert(
+                'insert into choices (poll_id, name) values (?, ?)',
+                [poll_id, name]
+            )
+            db.commit()
+        except sqlite3.IntegrityError:
+            raise web.HTTPError(409)
         notify_subscribers(self, poll_id)
 
 class VoteHandler(web.RequestHandler):
@@ -202,11 +208,14 @@ class VoteHandler(web.RequestHandler):
             db.delete('delete from votes where user_id = ? and choice_id = ?', [user_id, choice_id])
             db.commit()
         else:
-            db.insert(
-                'insert into votes (choice_id, user_id) values (?, ?)',
-                [choice_id, user_id]
-            )
-            db.commit()
+            try:
+                db.insert(
+                    'insert into votes (choice_id, user_id) values (?, ?)',
+                    [choice_id, user_id]
+                )
+                db.commit()
+            except sqlite3.IntegrityError:
+                raise web.HTTPError(409)
         notify_subscribers(self, poll_id)
 
 class VoterHandler(web.RequestHandler):
